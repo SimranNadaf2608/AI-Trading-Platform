@@ -64,25 +64,18 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
         <div className="hero-image">
-          <div className="trading-illustration">
-            <div className="chart-lines">
-              <div className="line line-1"></div>
-              <div className="line line-2"></div>
-              <div className="line line-3"></div>
-            </div>
-            <div className="chart-dots">
-              <div className="dot dot-1"></div>
-              <div className="dot dot-2"></div>
-              <div className="dot dot-3"></div>
-              <div className="dot dot-4"></div>
-            </div>
-            <div className="chart-candles">
-              <div className="candle candle-1"></div>
-              <div className="candle candle-2"></div>
-              <div className="candle candle-3"></div>
-              <div className="candle candle-4"></div>
-              <div className="candle candle-5"></div>
-            </div>
+          <div className="video-container">
+            <video 
+              autoPlay 
+              loop 
+              muted 
+              playsInline
+              className="hero-video"
+            >
+              <source src="https://videos.unsplash.com/video-1600068495415-0c4a7c0b9b3c?fm=mp4&q=80&w=1800" type="video/mp4" />
+              Your browser does not support the video tag.
+            </video>
+            <div className="video-overlay"></div>
           </div>
         </div>
       </div>
