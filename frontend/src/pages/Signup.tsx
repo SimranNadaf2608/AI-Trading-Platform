@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { UserPlus, Mail, Lock, User, Eye, EyeOff, ArrowRight, CheckCircle } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 const Signup: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -15,6 +15,7 @@ const Signup: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errors, setErrors] = useState<{[key: string]: string}>({});
+  const navigate = useNavigate();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
@@ -44,7 +45,8 @@ const Signup: React.FC = () => {
     e.preventDefault();
     if (validateForm()) {
       console.log('Signup data:', formData);
-      // Handle signup logic here
+      // Navigate to OTP verification page
+      navigate('/verify-otp');
     }
   };
 
