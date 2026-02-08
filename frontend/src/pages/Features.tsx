@@ -1,7 +1,9 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Bot, Zap, Shield, Brain, BarChart3, PieChart, TrendingUp, Lock, Globe, Clock, Award, Users, Target, ArrowRight, CheckCircle } from 'lucide-react';
 
 const Features: React.FC = () => {
+  const navigate = useNavigate();
   return (
     <div className="features-page">
       <div className="features-container">
@@ -187,7 +189,7 @@ const Features: React.FC = () => {
             <h2>Ready to Transform Your Trading?</h2>
             <p>Join thousands of traders who are already using AI to gain an edge in the market.</p>
             <div className="cta-buttons">
-              <button className="cta-primary">
+              <button className="cta-primary" onClick={() => navigate('/signup')}>
                 Get Started Now
                 <ArrowRight size={20} />
               </button>

@@ -1,29 +1,29 @@
 import React, { useState, useEffect } from 'react';
-import { UserPlus, Mail, Lock, User, Eye, EyeOff, ArrowRight, CheckCircle, Clock, AlertCircle } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
-import { authAPI, authUtils, OTPResponse, VerifyResponse } from '../services/authService';
+import { UserPlus, Mail, Lock, Eye, EyeOff, CheckCircle, Clock, ArrowLeft, AlertCircle } from 'lucide-react';
+import { authAPI, authUtils } from '../services/authService';
 
-const Signup: React.FC = () => {
+const SignupReal: React.FC = () => {
   const [formData, setFormData] = useState({
+    firstName: '',
+    lastName: '',
     email: '',
     password: '',
-    confirmPassword: '',
+    confirmPassword: ''
   });
-  
+  const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [currentStep, setCurrentStep] = useState<'email' | 'otp' | 'success'>('email');
+  const [timeLeft, setTimeLeft] = useState(300); // 5 minutes
+  const [resendTimer, setResendTimer] = useState(0);
+  const [canResendAfter, setCanResendAfter] = useState<number | null>(null);
+  const [isLocked, setIsLocked] = useState(false);
+  const [lockoutUntil, setLockoutUntil] = useState<string | null>(null);
   const [errors, setErrors] = useState<{[key: string]: string}>({});
   const [generalError, setGeneralError] = useState<string>('');
   const [otpError, setOtpError] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
-  const [currentStep, setCurrentStep] = useState<'email' | 'otp' | 'success'>('email');
-  const [otp, setOtp] = useState(['', '', '', '', '', '']);
-  const [timeLeft, setTimeLeft] = useState(300); // 5 minutes
-  const [canResendAfter, setCanResendAfter] = useState(0);
-  const [isLocked, setIsLocked] = useState(false);
-  const [lockoutUntil, setLockoutUntil] = useState<string | null>(null);
-  const [resendTimer, setResendTimer] = useState(0);
-  
   const navigate = useNavigate();
 
   // Timer for OTP expiry
@@ -52,37 +52,77 @@ const Signup: React.FC = () => {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const validateEmail = (email: string) => {
+    const re = /\S+@\S+\.\S+/;
+    return re.test(email);
+  };
+
+  const validatePassword = (password: string) => {
+    return password.length >= 8;
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    setFormData(prev => ({ ...prev, [name]: value }));
+    // Clear error when user starts typing
+    if (errors[name]) {
+      setErrors(prev => ({ ...prev, [name]: '' }));
+    }
   };
 
-  const validateForm = () => {
-    const newErrors: {[key: string]: string} = {};
-    
-    if (!formData.email.trim()) newErrors.email = 'Email is required';
-    if (!/\S+@\S+\.\S+/.test(formData.email)) newErrors.email = 'Email is invalid';
-    if (!formData.password) newErrors.password = 'Password is required';
-    if (formData.password.length < 8) newErrors.password = 'Password must be at least 8 characters';
-    if (formData.password !== formData.confirmPassword) newErrors.confirmPassword = 'Passwords do not match';
-    
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleSendOTP = async (e: React.FormEvent) => {
+  const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validateForm()) return;
-
-    setIsLoading(true);
     setErrors({});
     setGeneralError('');
 
+    if (!formData.firstName.trim()) {
+      setErrors({ firstName: 'First name is required' });
+      return;
+    }
+
+    if (!formData.lastName.trim()) {
+      setErrors({ lastName: 'Last name is required' });
+      return;
+    }
+
+    if (!formData.email.trim()) {
+      setErrors({ email: 'Email is required' });
+      return;
+    }
+
+    if (!validateEmail(formData.email)) {
+      setErrors({ email: 'Please enter a valid email address' });
+      return;
+    }
+
+    if (!formData.password) {
+      setErrors({ password: 'Password is required' });
+      return;
+    }
+
+    if (!validatePassword(formData.password)) {
+      setErrors({ password: 'Password must be at least 8 characters long' });
+      return;
+    }
+
+    if (formData.password !== formData.confirmPassword) {
+      setErrors({ confirmPassword: 'Passwords do not match' });
+      return;
+    }
+
+    setIsLoading(true);
+
     try {
-      const response = await authAPI.sendOTP(formData.email);
+      const response = await authAPI.sendOTP({
+        first_name: formData.firstName,
+        last_name: formData.lastName,
+        email: formData.email,
+        password: formData.password,
+        confirm_password: formData.confirmPassword
+      });
+      
+      // Save email to localStorage for OTP page
+      localStorage.setItem('signupEmail', formData.email);
       
       if (response.is_locked && response.lockout_until) {
         setIsLocked(true);
@@ -121,7 +161,7 @@ const Signup: React.FC = () => {
 
     // Check if OTP is complete
     if (newOtp.every(digit => digit !== '')) {
-      handleVerifyOTP(newOtp.join(''));
+      verifyOtp(newOtp.join(''));
     }
   };
 
@@ -134,7 +174,7 @@ const Signup: React.FC = () => {
     }
   };
 
-  const handleVerifyOTP = async (otpValue: string) => {
+  const verifyOtp = async (otpValue: string) => {
     setIsLoading(true);
     setErrors({});
     setOtpError('');
@@ -160,7 +200,7 @@ const Signup: React.FC = () => {
     }
   };
 
-  const handleResendOTP = async () => {
+  const handleResendOtp = async () => {
     if (resendTimer > 0 || isLoading) return;
 
     setIsLoading(true);
@@ -168,7 +208,13 @@ const Signup: React.FC = () => {
     setGeneralError('');
     
     try {
-      const response = await authAPI.sendOTP(formData.email);
+      const response = await authAPI.sendOTP({
+        first_name: formData.firstName,
+        last_name: formData.lastName,
+        email: formData.email,
+        password: formData.password,
+        confirm_password: formData.confirmPassword
+      });
       
       if (response.is_locked && response.lockout_until) {
         setIsLocked(true);
@@ -194,9 +240,13 @@ const Signup: React.FC = () => {
       const newOtp = pastedData.split('').concat(Array(6 - pastedData.length).fill(''));
       setOtp(newOtp);
       if (pastedData.length === 6) {
-        handleVerifyOTP(pastedData);
+        verifyOtp(pastedData);
       }
     }
+  };
+
+  const handleBackToSignin = () => {
+    navigate('/login');
   };
 
   if (currentStep === 'success') {
@@ -205,14 +255,38 @@ const Signup: React.FC = () => {
         <div className="signup-container">
           <div className="signup-content">
             <div className="success-animation">
-              <CheckCircle size={48} className="success-icon" />
+              <div className="success-icon-wrapper">
+                <CheckCircle size={48} className="success-icon" />
+              </div>
             </div>
-            <h1>Registration Successful!</h1>
-            <p>Your account has been created and verified successfully.</p>
+            <h1>Account Created Successfully!</h1>
+            <p>Welcome to AITrade Platform</p>
+            <p className="instruction-text">
+              Your account has been created and verified. You can now start trading with AI-powered insights.
+            </p>
+            
+            <div className="next-steps">
+              <h3>What's next?</h3>
+              <div className="steps-list">
+                <div className="step-item">
+                  <UserPlus className="step-icon" />
+                  <span>Complete your profile</span>
+                </div>
+                <div className="step-item">
+                  <Lock className="step-icon" />
+                  <span>Set up 2FA authentication</span>
+                </div>
+                <div className="step-item">
+                  <CheckCircle className="step-icon" />
+                  <span>Make your first trade</span>
+                </div>
+              </div>
+            </div>
+
             <div className="action-buttons">
-              <button className="signin-btn" onClick={() => navigate('/dashboard')}>
+              <button className="dashboard-btn" onClick={() => navigate('/dashboard')}>
                 Go to Dashboard
-                <ArrowRight size={20} />
+                <ArrowLeft size={20} className="rotate-180" />
               </button>
             </div>
           </div>
@@ -234,13 +308,54 @@ const Signup: React.FC = () => {
               {currentStep === 'otp' && 'Verify Your Email'}
             </h1>
             <p>
-              {currentStep === 'email' && 'Join AITrade and start your AI-powered trading journey'}
-              {currentStep === 'otp' && `Enter the verification code sent to ${formData.email}`}
+              {currentStep === 'email' && 'Create your account to get started'}
+              {currentStep === 'otp' && `We've sent a 6-digit code to ${formData.email}`}
             </p>
           </div>
 
+          <div className="otp-back-section">
+            <button className="back-to-signup-btn" onClick={() => navigate('/signup')}>
+              <ArrowLeft size={16} />
+              Back to Sign Up
+            </button>
+          </div>
+
           {currentStep === 'email' && (
-            <form className="signup-form" onSubmit={handleSendOTP}>
+            <form className="signup-form" onSubmit={handleEmailSubmit}>
+              <div className="form-group">
+                <label htmlFor="firstName">First Name</label>
+                <div className="input-wrapper">
+                  <UserPlus className="input-icon" />
+                  <input
+                    type="text"
+                    id="firstName"
+                    name="firstName"
+                    value={formData.firstName}
+                    onChange={handleInputChange}
+                    placeholder="Enter your first name"
+                    className={errors.firstName ? 'error' : ''}
+                  />
+                </div>
+                {errors.firstName && <span className="error-message">{errors.firstName}</span>}
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="lastName">Last Name</label>
+                <div className="input-wrapper">
+                  <UserPlus className="input-icon" />
+                  <input
+                    type="text"
+                    id="lastName"
+                    name="lastName"
+                    value={formData.lastName}
+                    onChange={handleInputChange}
+                    placeholder="Enter your last name"
+                    className={errors.lastName ? 'error' : ''}
+                  />
+                </div>
+                {errors.lastName && <span className="error-message">{errors.lastName}</span>}
+              </div>
+
               <div className="form-group">
                 <label htmlFor="email">Email Address</label>
                 <div className="input-wrapper">
@@ -250,7 +365,7 @@ const Signup: React.FC = () => {
                     id="email"
                     name="email"
                     value={formData.email}
-                    onChange={handleChange}
+                    onChange={handleInputChange}
                     placeholder="Enter your email"
                     className={errors.email ? 'error' : ''}
                   />
@@ -267,8 +382,8 @@ const Signup: React.FC = () => {
                     id="password"
                     name="password"
                     value={formData.password}
-                    onChange={handleChange}
-                    placeholder="Create a strong password"
+                    onChange={handleInputChange}
+                    placeholder="Enter your password"
                     className={errors.password ? 'error' : ''}
                   />
                   <button
@@ -291,7 +406,7 @@ const Signup: React.FC = () => {
                     id="confirmPassword"
                     name="confirmPassword"
                     value={formData.confirmPassword}
-                    onChange={handleChange}
+                    onChange={handleInputChange}
                     placeholder="Confirm your password"
                     className={errors.confirmPassword ? 'error' : ''}
                   />
@@ -306,13 +421,9 @@ const Signup: React.FC = () => {
                 {errors.confirmPassword && <span className="error-message">{errors.confirmPassword}</span>}
               </div>
 
-              {generalError && (
-                <div className="error-message general">{generalError}</div>
-              )}
-
-              <button type="submit" className="signup-btn" disabled={isLoading}>
-                {isLoading ? 'Sending...' : 'Send Verification Code'}
-                <ArrowRight size={20} />
+              <button type="submit" className="submit-btn" disabled={isLoading}>
+                {isLoading ? 'Creating Account...' : 'Create Account'}
+                <ArrowLeft size={20} className="rotate-180" />
               </button>
             </form>
           )}
@@ -347,17 +458,17 @@ const Signup: React.FC = () => {
                 <p>Didn't receive the code?</p>
                 <button 
                   className="resend-btn"
-                  onClick={handleResendOTP}
-                  disabled={resendTimer > 0 || isLoading}
+                  onClick={handleResendOtp}
+                  disabled={isLoading}
                 >
-                  {isLoading ? 'Sending...' : resendTimer > 0 ? `Resend in ${resendTimer}s` : 'Resend Code'}
+                  {isLoading ? 'Sending...' : 'Resend Code'}
                 </button>
               </div>
 
               {isLocked && lockoutUntil && (
                 <div className="lockout-message">
                   <AlertCircle size={16} />
-                  <span>Account locked. Try again in {authUtils.formatLockoutTime(lockoutUntil)}</span>
+                  <span>Account locked. Try again in {lockoutUntil ? authUtils.formatLockoutTime(lockoutUntil) : ''}</span>
                 </div>
               )}
             </div>
@@ -406,4 +517,4 @@ const Signup: React.FC = () => {
   );
 };
 
-export default Signup;
+export default SignupReal;

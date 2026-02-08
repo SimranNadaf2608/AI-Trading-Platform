@@ -1,22 +1,27 @@
 from fastapi import FastAPI, HTTPException, Depends, status
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
-from sqlalchemy import and_, or_
+from sqlalchemy import and_
 from datetime import datetime, timedelta
-from typing import Optional
 
-from database import get_db, User, OTPCode, OTPAttempt
+from database import get_db, User, OTPCode
 from schemas import (
-    UserCreate, UserLogin, OTPRequest, OTPVerify, 
+    SignupRequest, UserLogin, OTPRequest, OTPVerify, 
     PasswordReset, UserResponse, Token, OTPResponse, VerifyResponse
 )
 from auth_utils import (
     verify_password, get_password_hash, create_access_token, 
-    verify_token, generate_otp, is_otp_expired, can_attempt_otp, get_lockout_time
+    verify_token, generate_otp, is_otp_expired, is_resend_allowed, MAX_OTP_ATTEMPTS
 )
 from email_service import send_otp_email
+from api_routes import router as api_router
 
 app = FastAPI(title="AITrade Authentication API", version="1.0.0")
+security = HTTPBearer()
+
+# Include API routes
+app.include_router(api_router, prefix="/api", tags=["api"])
 
 # CORS middleware
 app.add_middleware(
@@ -27,60 +32,82 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.get("/")
+async def root():
+    print("🏠 Root endpoint called")
+    return {"message": "AITrade Auth Server is running on port 8001"}
+
 @app.post("/auth/send-otp", response_model=OTPResponse)
-async def send_otp(request: OTPRequest, db: Session = Depends(get_db)):
-    """Send OTP for registration or password reset"""
+async def send_otp(request: SignupRequest, db: Session = Depends(get_db)):
+    """Send OTP for registration"""
+    print(f"🚀 send_otp function called for email: {request.email}")
+    print(f"📋 Request data: {request.first_name} {request.last_name}")
+    
     email = request.email
-    
-    # Check if user is locked out
-    attempt_record = db.query(OTPAttempt).filter(OTPAttempt.email == email).first()
-    if attempt_record:
-        can_attempt, lockout_until = can_attempt_otp(attempt_record.attempt_count, attempt_record.lockout_until)
-        if not can_attempt:
-            return OTPResponse(
-                message="Too many failed attempts. Please try again later.",
-                is_locked=True,
-                lockout_until=lockout_until
-            )
-    
-    # Check if there's a recent unused OTP (within 60 seconds)
-    recent_otp = db.query(OTPCode).filter(
+
+    if request.password != request.confirm_password:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Passwords do not match"
+        )
+
+    existing_user = db.query(User).filter(User.email == email).first()
+    if existing_user and existing_user.is_verified:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User already exists"
+        )
+
+    last_otp = db.query(OTPCode).filter(
         and_(
             OTPCode.email == email,
             OTPCode.is_used == False,
-            OTPCode.expires_at > datetime.utcnow() + timedelta(minutes=4)
+            OTPCode.purpose == "signup"
         )
-    ).first()
-    
-    if recent_otp:
+    ).order_by(OTPCode.created_at.desc()).first()
+
+    if last_otp and not is_resend_allowed(last_otp.created_at.replace(tzinfo=None) if last_otp.created_at.tzinfo else last_otp.created_at):
         return OTPResponse(
             message="OTP already sent. Please wait before requesting a new one.",
             can_resend_after=60
         )
-    
-    # Generate and store OTP
+
     otp = generate_otp()
+    print(f"🔢 Generated OTP: {otp}")
+    print(f"📧 Sending OTP to: {email}")
+    print(f"⏰ Generated at: {datetime.utcnow()}")
     expires_at = datetime.utcnow() + timedelta(minutes=5)
-    
-    # Mark any existing OTPs as used
-    db.query(OTPCode).filter(OTPCode.email == email).update({"is_used": True})
-    
-    # Create new OTP record
+    print(f"⏳ Expires at: {expires_at}")
+
+
+    # Mark existing unused OTPs as used
+    db.query(OTPCode).filter(
+        and_(OTPCode.email == email, OTPCode.is_used == False, OTPCode.purpose == "signup")
+    ).update({"is_used": True})
+
     db_otp = OTPCode(
         email=email,
         otp=otp,
         expires_at=expires_at,
         is_used=False,
-        attempts=0
+        attempt_count=0,
+        purpose="signup",
+        first_name=request.first_name,
+        last_name=request.last_name,
+        password_hash=get_password_hash(request.password),
     )
     db.add(db_otp)
     db.commit()
-    
-    # Send OTP email
+
     try:
+        print(f"About to send email to {email} with OTP {otp}")
         await send_otp_email(email, otp, "verification")
+        print(f"Email sent successfully to {email}")
+        print(f"OTP for {email}: {otp}")  # Debug: Print OTP to console
         return OTPResponse(message="OTP sent successfully to your email")
     except Exception as e:
+        print(f"Email error: {e}")  # Debug: Print error
+        print(f"Email error type: {type(e).__name__}")  # Debug: Print error type
         db.delete(db_otp)
         db.commit()
         raise HTTPException(
@@ -99,22 +126,27 @@ async def verify_otp(request: OTPVerify, db: Session = Depends(get_db)):
         and_(
             OTPCode.email == email,
             OTPCode.otp == otp,
-            OTPCode.is_used == False
+            OTPCode.is_used == False,
+            OTPCode.purpose == "signup"
         )
     ).first()
     
     if not otp_record:
-        # Update attempt count
-        attempt_record = db.query(OTPAttempt).filter(OTPAttempt.email == email).first()
-        if not attempt_record:
-            attempt_record = OTPAttempt(email=email, attempt_count=1)
-            db.add(attempt_record)
-        else:
-            attempt_record.attempt_count += 1
-            if attempt_record.attempt_count >= 5:
-                attempt_record.lockout_until = get_lockout_time()
-        db.commit()
-        
+        # Update attempt count on latest active OTP
+        latest_otp = db.query(OTPCode).filter(
+            and_(
+                OTPCode.email == email,
+                OTPCode.is_used == False,
+                OTPCode.purpose == "signup"
+            )
+        ).order_by(OTPCode.created_at.desc()).first()
+
+        if latest_otp:
+            latest_otp.attempt_count += 1
+            if latest_otp.attempt_count >= MAX_OTP_ATTEMPTS:
+                latest_otp.is_used = True
+            db.commit()
+
         return VerifyResponse(
             message="Invalid OTP",
             success=False
@@ -122,85 +154,73 @@ async def verify_otp(request: OTPVerify, db: Session = Depends(get_db)):
     
     # Check if OTP is expired
     if is_otp_expired(otp_record.expires_at):
+        otp_record.is_used = True
+        db.commit()
         return VerifyResponse(
             message="OTP has expired. Please request a new one.",
+            success=False
+        )
+
+    if otp_record.attempt_count >= MAX_OTP_ATTEMPTS:
+        otp_record.is_used = True
+        db.commit()
+        return VerifyResponse(
+            message="OTP attempt limit exceeded. Please request a new code.",
             success=False
         )
     
     # Mark OTP as used
     otp_record.is_used = True
     db.commit()
-    
-    # Reset attempt count
-    attempt_record = db.query(OTPAttempt).filter(OTPAttempt.email == email).first()
-    if attempt_record:
-        attempt_record.attempt_count = 0
-        attempt_record.lockout_until = None
-        db.commit()
-    
-    # Check if user exists (for password reset) or create new user (for registration)
-    user = db.query(User).filter(User.email == email).first()
-    
-    if user:
-        # User exists - this is for password reset
-        token = create_access_token(data={"sub": user.email, "user_id": user.id})
-        user_response = UserResponse(
-            id=user.id,
-            email=user.email,
-            is_verified=user.is_verified,
-            created_at=user.created_at
-        )
+
+    if not otp_record.first_name or not otp_record.last_name or not otp_record.password_hash:
         return VerifyResponse(
-            message="OTP verified successfully. You can now reset your password.",
-            success=True,
-            user=user_response,
-            token=token
-        )
-    else:
-        # New user - create account
-        # For now, we'll create a temporary user and require password in next step
-        # In a real implementation, you might want to collect password during initial OTP request
-        return VerifyResponse(
-            message="OTP verified successfully. Please set your password to complete registration.",
-            success=True
+            message="Missing signup details. Please restart signup.",
+            success=False
         )
 
-@app.post("/auth/register", response_model=Token)
-async def register(email: str, password: str, db: Session = Depends(get_db)):
-    """Complete user registration with password"""
-    # Check if user already exists
     existing_user = db.query(User).filter(User.email == email).first()
-    if existing_user:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="User already exists"
+    if existing_user and existing_user.is_verified:
+        return VerifyResponse(
+            message="User already exists.",
+            success=False
         )
-    
-    # Create new user
-    hashed_password = get_password_hash(password)
-    user = User(
-        email=email,
-        hashed_password=hashed_password,
-        is_verified=True
-    )
-    db.add(user)
-    db.commit()
-    db.refresh(user)
-    
-    # Create access token
+
+    if existing_user:
+        existing_user.first_name = otp_record.first_name
+        existing_user.last_name = otp_record.last_name
+        existing_user.hashed_password = otp_record.password_hash
+        existing_user.is_verified = True
+        db.commit()
+        db.refresh(existing_user)
+        user = existing_user
+    else:
+        user = User(
+            first_name=otp_record.first_name,
+            last_name=otp_record.last_name,
+            email=email,
+            hashed_password=otp_record.password_hash,
+            is_verified=True
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+
     token = create_access_token(data={"sub": user.email, "user_id": user.id})
-    
     user_response = UserResponse(
         id=user.id,
+        first_name=user.first_name,
+        last_name=user.last_name,
         email=user.email,
         is_verified=user.is_verified,
         created_at=user.created_at
     )
-    
-    return Token(
-        access_token=token,
-        token_type="bearer",
-        user=user_response
+
+    return VerifyResponse(
+        message="OTP verified successfully. Account created.",
+        success=True,
+        user=user_response,
+        token=token
     )
 
 @app.post("/auth/login", response_model=Token)
@@ -225,6 +245,8 @@ async def login(user_credentials: UserLogin, db: Session = Depends(get_db)):
     
     user_response = UserResponse(
         id=user.id,
+        first_name=user.first_name,
+        last_name=user.last_name,
         email=user.email,
         is_verified=user.is_verified,
         created_at=user.created_at
@@ -247,27 +269,16 @@ async def forgot_password(request: OTPRequest, db: Session = Depends(get_db)):
         # Don't reveal if user exists or not for security
         return OTPResponse(message="If an account exists, an OTP will be sent")
     
-    # Check if user is locked out
-    attempt_record = db.query(OTPAttempt).filter(OTPAttempt.email == email).first()
-    if attempt_record:
-        can_attempt, lockout_until = can_attempt_otp(attempt_record.attempt_count, attempt_record.lockout_until)
-        if not can_attempt:
-            return OTPResponse(
-                message="Too many failed attempts. Please try again later.",
-                is_locked=True,
-                lockout_until=lockout_until
-            )
-    
     # Check if there's a recent unused OTP (within 60 seconds)
     recent_otp = db.query(OTPCode).filter(
         and_(
             OTPCode.email == email,
             OTPCode.is_used == False,
-            OTPCode.expires_at > datetime.utcnow() + timedelta(minutes=4)
+            OTPCode.purpose == "reset"
         )
-    ).first()
+    ).order_by(OTPCode.created_at.desc()).first()
     
-    if recent_otp:
+    if recent_otp and not is_resend_allowed(recent_otp.created_at):
         return OTPResponse(
             message="OTP already sent. Please wait before requesting a new one.",
             can_resend_after=60
@@ -278,7 +289,9 @@ async def forgot_password(request: OTPRequest, db: Session = Depends(get_db)):
     expires_at = datetime.utcnow() + timedelta(minutes=5)
     
     # Mark any existing OTPs as used
-    db.query(OTPCode).filter(OTPCode.email == email).update({"is_used": True})
+    db.query(OTPCode).filter(
+        and_(OTPCode.email == email, OTPCode.is_used == False, OTPCode.purpose == "reset")
+    ).update({"is_used": True})
     
     # Create new OTP record
     db_otp = OTPCode(
@@ -286,7 +299,8 @@ async def forgot_password(request: OTPRequest, db: Session = Depends(get_db)):
         otp=otp,
         expires_at=expires_at,
         is_used=False,
-        attempts=0
+        attempt_count=0,
+        purpose="reset"
     )
     db.add(db_otp)
     db.commit()
@@ -315,22 +329,26 @@ async def reset_password(request: PasswordReset, db: Session = Depends(get_db)):
         and_(
             OTPCode.email == email,
             OTPCode.otp == otp,
-            OTPCode.is_used == False
+            OTPCode.is_used == False,
+            OTPCode.purpose == "reset"
         )
     ).first()
     
     if not otp_record:
-        # Update attempt count
-        attempt_record = db.query(OTPAttempt).filter(OTPAttempt.email == email).first()
-        if not attempt_record:
-            attempt_record = OTPAttempt(email=email, attempt_count=1)
-            db.add(attempt_record)
-        else:
-            attempt_record.attempt_count += 1
-            if attempt_record.attempt_count >= 5:
-                attempt_record.lockout_until = get_lockout_time()
-        db.commit()
-        
+        latest_otp = db.query(OTPCode).filter(
+            and_(
+                OTPCode.email == email,
+                OTPCode.is_used == False,
+                OTPCode.purpose == "reset"
+            )
+        ).order_by(OTPCode.created_at.desc()).first()
+
+        if latest_otp:
+            latest_otp.attempt_count += 1
+            if latest_otp.attempt_count >= MAX_OTP_ATTEMPTS:
+                latest_otp.is_used = True
+            db.commit()
+
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid or expired OTP"
@@ -338,9 +356,19 @@ async def reset_password(request: PasswordReset, db: Session = Depends(get_db)):
     
     # Check if OTP is expired
     if is_otp_expired(otp_record.expires_at):
+        otp_record.is_used = True
+        db.commit()
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="OTP has expired. Please request a new one."
+        )
+
+    if otp_record.attempt_count >= MAX_OTP_ATTEMPTS:
+        otp_record.is_used = True
+        db.commit()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="OTP attempt limit exceeded. Please request a new one."
         )
     
     # Mark OTP as used
@@ -358,28 +386,21 @@ async def reset_password(request: PasswordReset, db: Session = Depends(get_db)):
     user.hashed_password = get_password_hash(new_password)
     db.commit()
     
-    # Reset attempt count
-    attempt_record = db.query(OTPAttempt).filter(OTPAttempt.email == email).first()
-    if attempt_record:
-        attempt_record.attempt_count = 0
-        attempt_record.lockout_until = None
-        db.commit()
-    
     return {"message": "Password reset successfully"}
 
 # Dependency to get current user
-async def get_current_user(token: str = None, db: Session = Depends(get_db)):
+async def get_current_user(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db)
+):
     """Get current user from JWT token"""
-    if not token:
-        return None
-        
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
-    
-    payload = verify_token(token)
+
+    payload = verify_token(credentials.credentials)
     if payload is None:
         raise credentials_exception
     
@@ -400,6 +421,8 @@ async def get_current_user_endpoint(current_user: User = Depends(get_current_use
     """Get current user information"""
     return UserResponse(
         id=current_user.id,
+        first_name=current_user.first_name,
+        last_name=current_user.last_name,
         email=current_user.email,
         is_verified=current_user.is_verified,
         created_at=current_user.created_at

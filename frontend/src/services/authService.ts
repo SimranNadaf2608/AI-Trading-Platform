@@ -1,7 +1,7 @@
 import axios, { AxiosResponse } from 'axios';
 
 // API Configuration
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8001';
 
 // Create axios instance
 const api = axios.create({
@@ -70,8 +70,14 @@ export interface VerifyResponse {
 // API Functions
 export const authAPI = {
   // Send OTP for registration
-  sendOTP: async (email: string): Promise<OTPResponse> => {
-    const response: AxiosResponse<OTPResponse> = await api.post('/auth/send-otp', { email });
+  sendOTP: async (signupData: {
+    first_name: string;
+    last_name: string;
+    email: string;
+    password: string;
+    confirm_password: string;
+  }): Promise<OTPResponse> => {
+    const response: AxiosResponse<OTPResponse> = await api.post('/auth/send-otp', signupData);
     return response.data;
   },
 

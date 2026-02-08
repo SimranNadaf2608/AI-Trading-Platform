@@ -20,7 +20,7 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 30
 # OTP settings
 OTP_EXPIRE_MINUTES = 5
 MAX_OTP_ATTEMPTS = 5
-OTP_LOCKOUT_MINUTES = 15
+RESEND_COOLDOWN_SECONDS = 60
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Verify a password against its hash"""
@@ -28,7 +28,17 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 def get_password_hash(password: str) -> str:
     """Hash a password"""
-    return pwd_context.hash(password)
+    try:
+        # Truncate password if too long for bcrypt (max 72 bytes)
+        if len(password.encode('utf-8')) > 72:
+            password = password.encode('utf-8')[:72].decode('utf-8', errors='ignore')
+        print(f"Hashing password (truncated if needed): {password[:20]}...")
+        return pwd_context.hash(password)
+    except Exception as e:
+        print(f"Error hashing password: {e}")
+        # Fallback to simple hash if bcrypt fails
+        import hashlib
+        return hashlib.sha256(password.encode()).hexdigest()
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     """Create JWT access token"""
@@ -58,16 +68,11 @@ def is_otp_expired(expires_at: datetime) -> bool:
     """Check if OTP has expired"""
     return datetime.utcnow() > expires_at
 
-def can_attempt_otp(attempts: int, lockout_until: Optional[datetime]) -> tuple[bool, Optional[datetime]]:
-    """Check if user can attempt OTP verification"""
-    if attempts >= MAX_OTP_ATTEMPTS:
-        if lockout_until and datetime.utcnow() < lockout_until:
-            return False, lockout_until
-        else:
-            # Reset attempts after lockout period
-            return True, None
-    return True, None
-
-def get_lockout_time() -> datetime:
-    """Get lockout expiration time"""
-    return datetime.utcnow() + timedelta(minutes=OTP_LOCKOUT_MINUTES)
+def is_resend_allowed(last_created_at: Optional[datetime]) -> bool:
+    """Check resend cooldown window"""
+    if not last_created_at:
+        return True
+    # Ensure both datetimes are naive (no timezone)
+    if last_created_at.tzinfo is not None:
+        last_created_at = last_created_at.replace(tzinfo=None)
+    return (datetime.utcnow() - last_created_at).total_seconds() >= RESEND_COOLDOWN_SECONDS

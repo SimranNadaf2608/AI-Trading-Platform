@@ -12,12 +12,14 @@ body {
   -moz-osx-font-smoothing: grayscale;
   background-color: #f8fafc;
   color: #1e293b;
+  overflow-x: hidden;
 }
 
 .App {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  overflow-x: hidden;
 }
 
 /* Navbar Styles */
@@ -4421,7 +4423,9 @@ input:checked + .slider:before {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 2rem;
+  padding: 2rem 1rem;
+  overflow-x: hidden;
+  background: white;
 }
 
 .signup-container {
@@ -4431,13 +4435,14 @@ input:checked + .slider:before {
   grid-template-columns: 1fr 1fr;
   gap: 4rem;
   align-items: center;
+  overflow: hidden;
+  background: white;
+  border-radius: 1.5rem;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
 }
 
 .signup-content {
-  background: white;
-  border-radius: 2rem;
   padding: 3rem;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
 }
 
 .signup-header {
@@ -4695,6 +4700,13 @@ input:checked + .slider:before {
 }
 
 /* Responsive Design for Signup Page */
+@media (min-width: 1400px) {
+  .signup-container {
+    max-width: 1200px;
+    gap: 4rem;
+  }
+}
+
 @media (max-width: 768px) {
   .signup-page {
     padding: 1rem;
@@ -5035,7 +5047,6 @@ input:checked + .slider:before {
   justify-content: center;
   padding: 2rem;
   padding-top: 6rem;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
 
 .otp-container {

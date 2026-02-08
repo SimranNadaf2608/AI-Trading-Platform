@@ -1,7 +1,9 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { TrendingUp, Users, Award, Shield, Globe, Target, ArrowRight, Play } from 'lucide-react';
 
 const About: React.FC = () => {
+  const navigate = useNavigate();
   return (
     <div className="about-page">
       {/* Hero Section */}
@@ -11,7 +13,7 @@ const About: React.FC = () => {
           <h2>The Future of Crypto Trading.</h2>
           <p>Trader-friendly and trusted by thousands, our mission is to make trading in crypto as simple as it should be, using AI-powered trading tools, automation, and a single dashboard to trade smarter each day.</p>
           <div className="hero-buttons">
-            <button className="btn-primary">
+            <button className="btn-primary" onClick={() => navigate('/signup')}>
               Get Started
               <ArrowRight size={20} />
             </button>

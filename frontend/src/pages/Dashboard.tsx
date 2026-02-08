@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { TrendingUp, TrendingDown, DollarSign, Activity, ArrowRight, Bot, Zap, Shield, Brain, Play, BarChart3, PieChart as PieChartIcon, TrendingUp as TrendingIcon, Star, Quote, BookOpen, FileText, Video, Download, Users, Award, Lightbulb } from 'lucide-react';
 import { getStocks, getAnalytics } from '../services/api';
 
@@ -21,6 +22,7 @@ interface Analytics {
 }
 
 const Dashboard: React.FC = () => {
+  const navigate = useNavigate();
   const [stocks, setStocks] = useState<Stock[]>([]);
   const [analytics, setAnalytics] = useState<Analytics | null>(null);
   const [loading, setLoading] = useState(true);
@@ -57,25 +59,20 @@ const Dashboard: React.FC = () => {
             <h1>Automate your trading.</h1>
             <h2>Smart and simple.</h2>
             <p>Fully automated trading with your broker account, launched in minutes</p>
-            <button className="btn btn-primary btn-large hero-btn">
+            <button className="btn btn-primary btn-large hero-btn" onClick={() => navigate('/signup')}>
               Get Started
               <ArrowRight size={20} />
             </button>
           </div>
         </div>
         <div className="hero-image">
-          <div className="video-container">
-            <video 
-              autoPlay 
-              loop 
-              muted 
-              playsInline
-              className="hero-video"
-            >
-              <source src="https://videos.unsplash.com/video-1600068495415-0c4a7c0b9b3c?fm=mp4&q=80&w=1800" type="video/mp4" />
-              Your browser does not support the video tag.
-            </video>
-            <div className="video-overlay"></div>
+          <div className="image-container">
+            <img 
+              src="https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1200&q=80"
+              alt="Trading Dashboard"
+              className="hero-image"
+            />
+            <div className="image-overlay"></div>
           </div>
         </div>
       </div>
@@ -369,7 +366,7 @@ const Dashboard: React.FC = () => {
           <div className="cta-content">
             <h3>Ready to Start Automated Trading?</h3>
             <p>Join thousands of traders who have already transformed their investment strategy with AI</p>
-            <button className="btn btn-primary btn-large cta-btn">
+            <button className="btn btn-primary btn-large cta-btn" onClick={() => navigate('/signup')}>
               Get Started Now
               <ArrowRight size={20} />
             </button>

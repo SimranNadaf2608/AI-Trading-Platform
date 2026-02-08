@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { Mail, ArrowRight, CheckCircle, Clock, Shield, Smartphone } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 
 const OtpVerification: React.FC = () => {
-  const [otp, setOtp] = useState(['', '', '', '', '', '', '']);
+  const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [timeLeft, setTimeLeft] = useState(120); // 2 minutes
   const [isVerified, setIsVerified] = useState(false);
   const [error, setError] = useState('');
   const [isResending, setIsResending] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+  const email = location.state?.email || localStorage.getItem('signupEmail') || 'your email';
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -71,7 +73,6 @@ const OtpVerification: React.FC = () => {
     setIsResending(true);
     // Simulate resend OTP
     await new Promise(resolve => setTimeout(resolve, 2000));
-    setTimeLeft(120);
     setIsResending(false);
     setError('');
     setOtp(['', '', '', '', '', '']);
@@ -122,7 +123,7 @@ const OtpVerification: React.FC = () => {
             </div>
             <h1>Verify Your Email</h1>
             <p>We've sent a 6-digit verification code to your email address</p>
-            <p className="email-display">user@example.com</p>
+            <p className="email-display">{email}</p>
           </div>
 
           <div className="otp-form">
@@ -164,9 +165,9 @@ const OtpVerification: React.FC = () => {
             <button 
               className="resend-btn"
               onClick={handleResend}
-              disabled={timeLeft > 0 || isResending}
+              disabled={isResending}
             >
-              {isResending ? 'Sending...' : timeLeft > 0 ? `Resend in ${formatTime(timeLeft)}` : 'Resend Code'}
+              {isResending ? 'Sending...' : 'Resend Code'}
             </button>
           </div>
 

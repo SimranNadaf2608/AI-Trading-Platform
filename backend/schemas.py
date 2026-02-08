@@ -2,9 +2,12 @@ from pydantic import BaseModel, EmailStr
 from typing import Optional
 from datetime import datetime
 
-class UserCreate(BaseModel):
+class SignupRequest(BaseModel):
+    first_name: str
+    last_name: str
     email: EmailStr
     password: str
+    confirm_password: str
 
 class UserLogin(BaseModel):
     email: EmailStr
@@ -24,6 +27,8 @@ class PasswordReset(BaseModel):
 
 class UserResponse(BaseModel):
     id: int
+    first_name: str
+    last_name: str
     email: str
     is_verified: bool
     created_at: datetime

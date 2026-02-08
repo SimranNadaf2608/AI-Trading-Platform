@@ -76,6 +76,9 @@ const ForgotPasswordReal: React.FC = () => {
     try {
       const response = await authAPI.sendPasswordResetOTP(email);
       
+      // Save email to localStorage for OTP page
+      localStorage.setItem('signupEmail', email);
+      
       if (response.is_locked && response.lockout_until) {
         setIsLocked(true);
         setLockoutUntil(response.lockout_until);
@@ -293,6 +296,13 @@ const ForgotPasswordReal: React.FC = () => {
             </p>
           </div>
 
+          <div className="otp-back-section">
+            <button className="back-to-signup-btn" onClick={() => navigate('/signup')}>
+              <ArrowLeft size={16} />
+              Back to Sign Up
+            </button>
+          </div>
+
           {currentStep === 'email' && (
             <form className="forgot-password-form" onSubmit={handleEmailSubmit}>
               <div className="form-group">
@@ -349,9 +359,9 @@ const ForgotPasswordReal: React.FC = () => {
                 <button 
                   className="resend-btn"
                   onClick={handleResendOtp}
-                  disabled={resendTimer > 0 || isLoading}
+                  disabled={isLoading}
                 >
-                  {isLoading ? 'Sending...' : resendTimer > 0 ? `Resend in ${resendTimer}s` : 'Resend Code'}
+                  {isLoading ? 'Sending...' : 'Resend Code'}
                 </button>
               </div>
 
