@@ -34,10 +34,12 @@ const Dashboard: React.FC = () => {
           getStocks(),
           getAnalytics()
         ]);
-        setStocks(stocksData);
+        setStocks(Array.isArray(stocksData) ? stocksData : []);
         setAnalytics(analyticsData);
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
+        setStocks([]);
+        setAnalytics(null);
       } finally {
         setLoading(false);
       }
@@ -382,7 +384,7 @@ const Dashboard: React.FC = () => {
             </div>
             <div className="stat-content">
               <h3>Total Assets</h3>
-              <p className="stat-value">${analytics.total_assets.toFixed(2)}</p>
+              <p className="stat-value">${(analytics.total_assets || 0).toFixed(2)}</p>
             </div>
           </div>
           
@@ -392,18 +394,18 @@ const Dashboard: React.FC = () => {
             </div>
             <div className="stat-content">
               <h3>Total Value</h3>
-              <p className="stat-value">${analytics.total_value.toFixed(2)}</p>
+              <p className="stat-value">${(analytics.total_value || 0).toFixed(2)}</p>
             </div>
           </div>
           
           <div className="stat-card">
             <div className="stat-icon">
-              {analytics.total_profit_loss >= 0 ? <TrendingUp /> : <TrendingDown />}
+              {(analytics.total_profit_loss || 0) >= 0 ? <TrendingUp /> : <TrendingDown />}
             </div>
             <div className="stat-content">
               <h3>Total P&L</h3>
-              <p className={`stat-value ${analytics.total_profit_loss >= 0 ? 'positive' : 'negative'}`}>
-                ${analytics.total_profit_loss.toFixed(2)} ({analytics.profit_loss_percent.toFixed(2)}%)
+              <p className={`stat-value ${(analytics.total_profit_loss || 0) >= 0 ? 'positive' : 'negative'}`}>
+                ${(analytics.total_profit_loss || 0).toFixed(2)} ({(analytics.profit_loss_percent || 0).toFixed(2)}%)
               </p>
             </div>
           </div>
@@ -414,7 +416,7 @@ const Dashboard: React.FC = () => {
             </div>
             <div className="stat-content">
               <h3>Cash Balance</h3>
-              <p className="stat-value">${analytics.cash_balance.toFixed(2)}</p>
+              <p className="stat-value">${(analytics.cash_balance || 0).toFixed(2)}</p>
             </div>
           </div>
         </div>
@@ -424,23 +426,27 @@ const Dashboard: React.FC = () => {
         <div className="market-overview">
           <h2>Market Overview</h2>
           <div className="stocks-grid">
-            {stocks.map((stock) => (
+            {stocks && stocks.length > 0 ? stocks.map((stock) => (
               <div key={stock.symbol} className="stock-card">
                 <div className="stock-header">
                   <h3>{stock.symbol}</h3>
                   <span className={`stock-change ${stock.change >= 0 ? 'positive' : 'negative'}`}>
-                    {stock.change >= 0 ? '+' : ''}{stock.change_percent.toFixed(2)}%
+                    {stock.change >= 0 ? '+' : ''}{(stock.change_percent !== null && stock.change_percent !== undefined) ? stock.change_percent.toFixed(2) : '0'}%
                   </span>
                 </div>
                 <div className="stock-price">
-                  <p className="price">${stock.price.toFixed(2)}</p>
-                  <p className="change">{stock.change >= 0 ? '+' : ''}${stock.change.toFixed(2)}</p>
+                  <p className="price">${(stock.price !== null && stock.price !== undefined) ? stock.price.toFixed(2) : '0'}</p>
+                  <p className="change">{(stock.change !== null && stock.change !== undefined) ? ((stock.change >= 0) ? '+' : '') + stock.change.toFixed(2) : '0'}</p>
                 </div>
                 <div className="stock-volume">
-                  <p>Vol: {stock.volume.toLocaleString()}</p>
+                  <p>Vol: {(stock.volume || 0).toLocaleString()}</p>
                 </div>
               </div>
-            ))}
+            )) : (
+              <div className="no-stocks-message">
+                <p>No stock data available</p>
+              </div>
+            )}
           </div>
         </div>
       </div>

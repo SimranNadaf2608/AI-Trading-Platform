@@ -55,8 +55,15 @@ async def send_otp(request: SignupRequest, db: Session = Depends(get_db)):
     if existing_user and existing_user.is_verified:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="User already exists"
+            detail="User already exists and is verified"
         )
+    elif existing_user and not existing_user.is_verified:
+        # User exists but is not verified - allow sending new OTP
+        print(f"📧 Existing unverified user found: {email}")
+        pass
+    else:
+        # New user - proceed normally
+        print(f"👤 New user signup: {email}")
 
     last_otp = db.query(OTPCode).filter(
         and_(
