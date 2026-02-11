@@ -284,7 +284,7 @@ const SignupReal: React.FC = () => {
             </div>
 
             <div className="action-buttons">
-              <button className="dashboard-btn" onClick={() => navigate('/dashboard')}>
+              <button className="dashboard-btn" onClick={() => navigate('/')}>
                 Go to Dashboard
                 <ArrowLeft size={20} className="rotate-180" />
               </button>
@@ -313,12 +313,12 @@ const SignupReal: React.FC = () => {
             </p>
           </div>
 
-          <div className="otp-back-section">
+          {/* <div className="otp-back-section">
             <button className="back-to-signup-btn" onClick={() => navigate('/signup')}>
               <ArrowLeft size={16} />
               Back to Sign Up
             </button>
-          </div>
+          </div> */}
 
           {currentStep === 'email' && (
             <form className="signup-form" onSubmit={handleEmailSubmit}>

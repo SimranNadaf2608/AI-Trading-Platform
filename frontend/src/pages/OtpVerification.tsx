@@ -1,16 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { Mail, ArrowRight, CheckCircle, Clock, Shield, Smartphone } from 'lucide-react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { authAPI, authUtils } from '../services/authService';
 
 const OtpVerification: React.FC = () => {
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
-  const [timeLeft, setTimeLeft] = useState(120); // 2 minutes
+  const [timeLeft, setTimeLeft] = useState(120);
   const [isVerified, setIsVerified] = useState(false);
   const [error, setError] = useState('');
   const [isResending, setIsResending] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
-  const email = location.state?.email || localStorage.getItem('signupEmail') || 'your email';
+  const email =
+    location.state?.email ||
+    localStorage.getItem('signupEmail') ||
+    'your email';
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -28,12 +32,11 @@ const OtpVerification: React.FC = () => {
 
   const handleOtpChange = (index: number, value: string) => {
     if (value.length > 1) return;
-    
+
     const newOtp = [...otp];
     newOtp[index] = value;
     setOtp(newOtp);
 
-    // Auto-focus next input
     if (value && index < 5) {
       const nextInput = document.getElementById(`otp-${index + 1}`);
       if (nextInput) {
@@ -41,8 +44,7 @@ const OtpVerification: React.FC = () => {
       }
     }
 
-    // Check if OTP is complete
-    if (newOtp.every(digit => digit !== '')) {
+    if (newOtp.every((digit) => digit !== '')) {
       verifyOtp(newOtp.join(''));
     }
   };
@@ -56,26 +58,66 @@ const OtpVerification: React.FC = () => {
     }
   };
 
-  const verifyOtp = (otpValue: string) => {
-    // Simulate OTP verification
-    if (otpValue === '123456') {
-      setIsVerified(true);
-      setTimeout(() => {
-        navigate('/dashboard');
-      }, 2000);
-    } else {
-      setError('Invalid OTP. Please try again.');
+  // REAL OTP VERIFICATION
+  const verifyOtp = async (otpValue: string) => {
+    try {
+      const res = await authAPI.verifyOTP(email, otpValue);
+
+      if (res.success && res.token && res.user) {
+        setIsVerified(true);
+
+        // Store login data
+        authUtils.setAuthData(res.token, res.user);
+
+        // Clean up stored signup data
+        localStorage.removeItem('signupData');
+        localStorage.removeItem('signupEmail');
+
+        setTimeout(() => {
+          navigate('/dashboard');
+        }, 2000);
+      } else {
+        setError(res.message || 'Invalid OTP');
+        setTimeout(() => setError(''), 3000);
+      }
+    } catch (err: any) {
+      setError(
+        err.response?.data?.detail ||
+        'Invalid OTP. Please try again.'
+      );
       setTimeout(() => setError(''), 3000);
     }
   };
 
+  // RESEND LOGIC (BACKEND)
   const handleResend = async () => {
     setIsResending(true);
-    // Simulate resend OTP
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    setIsResending(false);
     setError('');
-    setOtp(['', '', '', '', '', '']);
+
+    try {
+      const signupDataStr = localStorage.getItem('signupData');
+      if (!signupDataStr) {
+        setError('Signup session expired. Please register again.');
+        return;
+      }
+
+      const signupData = JSON.parse(signupDataStr);
+
+      const res = await authAPI.sendOTP(signupData);
+
+      // Reset OTP inputs and timer
+      setOtp(['', '', '', '', '', '']);
+      setTimeLeft(120);
+      setError(res.message || '');
+
+    } catch (err: any) {
+      setError(
+        err.response?.data?.detail ||
+        'Failed to resend OTP. Please try again.'
+      );
+    } finally {
+      setIsResending(false);
+    }
   };
 
   const formatTime = (seconds: number) => {
@@ -88,7 +130,9 @@ const OtpVerification: React.FC = () => {
     e.preventDefault();
     const pastedData = e.clipboardData.getData('text').slice(0, 6);
     if (/^\d+$/.test(pastedData)) {
-      const newOtp = pastedData.split('').concat(Array(6 - pastedData.length).fill(''));
+      const newOtp = pastedData
+        .split('')
+        .concat(Array(6 - pastedData.length).fill(''));
       setOtp(newOtp);
       if (pastedData.length === 6) {
         verifyOtp(pastedData);
@@ -150,10 +194,10 @@ const OtpVerification: React.FC = () => {
               <span>Code expires in {formatTime(timeLeft)}</span>
             </div>
 
-            <button 
+            <button
               className="verify-btn"
               onClick={() => verifyOtp(otp.join(''))}
-              disabled={otp.some(digit => digit === '')}
+              disabled={otp.some((digit) => digit === '')}
             >
               Verify Email
               <ArrowRight size={20} />
@@ -162,7 +206,7 @@ const OtpVerification: React.FC = () => {
 
           <div className="otp-footer">
             <p>Didn't receive the code?</p>
-            <button 
+            <button
               className="resend-btn"
               onClick={handleResend}
               disabled={isResending}

@@ -1,6 +1,6 @@
 import random
 import string
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from passlib.context import CryptContext
 from jose import JWTError, jwt
 from typing import Optional
@@ -64,9 +64,9 @@ def generate_otp() -> str:
     """Generate 6-digit OTP"""
     return ''.join(random.choices(string.digits, k=6))
 
-def is_otp_expired(expires_at: datetime) -> bool:
+def is_otp_expired(expires_at) -> bool:
     """Check if OTP has expired"""
-    return datetime.utcnow() > expires_at
+    return datetime.now(timezone.utc) > expires_at
 
 def is_resend_allowed(last_created_at: Optional[datetime]) -> bool:
     """Check resend cooldown window"""
