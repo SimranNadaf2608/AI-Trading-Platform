@@ -211,6 +211,53 @@ def register(email: str, password: str):
         "email": email
     }
 
+# ----------------------------------------------------------------------------
+# LOGIN
+# ----------------------------------------------------------------------------
+@app.post("/auth/login")
+async def login(user_credentials: UserLogin, db: Session = Depends(get_db)):
+    """User login"""
+
+    print(f"🔐 Login attempt for: {user_credentials.email}")
+
+    user = db.query(User).filter(User.email == user_credentials.email).first()
+
+    if not user:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid email or password"
+        )
+
+    if not verify_password(user_credentials.password, user.hashed_password):
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid email or password"
+        )
+
+    if not user.is_verified:
+        raise HTTPException(
+            status_code=401,
+            detail="Please verify your email first"
+        )
+
+    token = create_access_token(
+        data={"sub": user.email, "user_id": user.id}
+    )
+
+    return {
+        "access_token": token,
+        "token_type": "bearer",
+        "user": {
+            "id": user.id,
+            "first_name": user.first_name,
+            "last_name": user.last_name,
+            "email": user.email,
+            "is_verified": user.is_verified,
+            "created_at": user.created_at
+        }
+    }
+
+
 
 # ----------------------------------------------------------------------------
 if __name__ == "__main__":
