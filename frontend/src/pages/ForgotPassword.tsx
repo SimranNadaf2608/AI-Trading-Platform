@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Lock, Mail, ArrowRight, CheckCircle, Shield, Clock, ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
+import { authAPI } from '../services/authService';
+
 
 const ForgotPassword: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -24,27 +26,35 @@ const ForgotPassword: React.FC = () => {
   };
 
   const handleEmailSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
+  e.preventDefault();
+  setError('');
 
-    if (!email.trim()) {
-      setError('Email is required');
-      return;
-    }
+  if (!email.trim()) {
+    setError('Email is required');
+    return;
+  }
 
-    if (!validateEmail(email)) {
-      setError('Please enter a valid email address');
-      return;
-    }
+  if (!validateEmail(email)) {
+    setError('Please enter a valid email address');
+    return;
+  }
 
-    setIsLoading(true);
-    
-    // Simulate API call to send OTP
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
+  setIsLoading(true);
+
+  try {
+    const res = await authAPI.sendPasswordResetOTP(email);
+
+    localStorage.setItem('resetEmail', email);
     setCurrentStep('otp');
+  } catch (err: any) {
+    setError(
+      err.response?.data?.detail ||
+      'Failed to send verification code'
+    );
+  } finally {
     setIsLoading(false);
-  };
+  }
+};
 
   const handleOtpChange = (index: number, value: string) => {
     if (value.length > 1) return;
@@ -77,55 +87,98 @@ const ForgotPassword: React.FC = () => {
   };
 
   const verifyOtp = async (otpValue: string) => {
-    // Simulate OTP verification
-    if (otpValue === '123456') {
-      setCurrentStep('password');
-    } else {
-      setError('Invalid OTP. Please try again.');
-      setTimeout(() => setError(''), 3000);
-    }
-  };
+  setError('');
+  setIsLoading(true);
 
-  const handlePasswordSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
+  try {
+    await authAPI.verifyResetOTP(email, otpValue);
 
-    if (!newPassword) {
-      setError('New password is required');
-      return;
-    }
-
-    if (!validatePassword(newPassword)) {
-      setError('Password must be at least 8 characters long');
-      return;
-    }
-
-    if (newPassword !== confirmPassword) {
-      setError('Passwords do not match');
-      return;
-    }
-
-    setIsLoading(true);
-    
-    // Simulate API call to reset password
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    setCurrentStep('success');
+    // Move to password step
+    setCurrentStep('password');
+  } catch (err: any) {
+    setError(
+      err.response?.data?.detail ||
+      'Invalid OTP. Please try again.'
+    );
+  } finally {
     setIsLoading(false);
-  };
+  }
+};
+
+
+const handlePasswordSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setError('');
+
+  if (!newPassword) {
+    setError('New password is required');
+    return;
+  }
+
+  if (!validatePassword(newPassword)) {
+    setError('Password must be at least 8 characters long');
+    return;
+  }
+
+  if (newPassword !== confirmPassword) {
+    setError('Passwords do not match');
+    return;
+  }
+
+  setIsLoading(true);
+
+  try {
+    const email = localStorage.getItem('resetEmail');
+    const otpValue = otp.join('');
+
+    if (!email) {
+      setError('Session expired. Please start again.');
+      return;
+    }
+
+    await authAPI.resetPassword(email, otpValue, newPassword);
+
+    // success
+    setCurrentStep('success');
+    localStorage.removeItem('resetEmail');
+  } catch (err: any) {
+    setError(
+      err.response?.data?.detail ||
+      'Password reset failed'
+    );
+  } finally {
+    setIsLoading(false);
+  }
+};
+
 
   const handleBackToSignin = () => {
     navigate('/login');
   };
 
   const handleResendOtp = async () => {
+  try {
     setIsLoading(true);
-    // Simulate resend OTP
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    setIsLoading(false);
-    setError('');
+
+    const email = localStorage.getItem('resetEmail');
+    if (!email) {
+      setError('Session expired. Please start again.');
+      return;
+    }
+
+    await authAPI.sendPasswordResetOTP(email);
     setOtp(['', '', '', '', '', '']);
-  };
+    setError('');
+  } catch (err: any) {
+    setError(
+      err.response?.data?.detail ||
+      'Failed to resend OTP'
+    );
+  } finally {
+    setIsLoading(false);
+  }
+};
+
 
   const handlePaste = (e: React.ClipboardEvent) => {
     e.preventDefault();

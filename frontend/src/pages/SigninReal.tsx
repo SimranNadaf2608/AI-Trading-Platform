@@ -49,7 +49,7 @@ const SigninReal: React.FC = () => {
       authUtils.setAuthData(response.access_token, response.user);
       
       // Redirect to dashboard
-      navigate('/dashboard');
+      navigate('/');
     } catch (error: any) {
       if (error.response?.status === 401) {
         const detail = error.response?.data?.detail;

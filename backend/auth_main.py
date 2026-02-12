@@ -257,6 +257,143 @@ async def login(user_credentials: UserLogin, db: Session = Depends(get_db)):
         }
     }
 
+# ----------------------------------------------------------------------------
+# FORGOT PASSWORD
+# ----------------------------------------------------------------------------
+@app.post("/auth/forgot-password", response_model=OTPResponse)
+async def forgot_password(request: OTPRequest, db: Session = Depends(get_db)):
+    print("🔐 Forgot password endpoint called")
+    print("📧 Email:", request.email)
+
+    email = request.email
+
+    # Check if user exists
+    user = db.query(User).filter(User.email == email).first()
+    print("👤 User found:", user)
+
+    if not user:
+        print("❌ User not found")
+        return OTPResponse(message="If an account exists, an OTP will be sent")
+
+    # Generate OTP
+    otp = generate_otp()
+    print("🔢 Generated OTP:", otp)
+
+    expires_at = datetime.now(timezone.utc) + timedelta(minutes=5)
+
+    # Mark existing reset OTPs as used
+    db.query(OTPCode).filter(
+        and_(
+            OTPCode.email == email,
+            OTPCode.is_used == False,
+            OTPCode.purpose == "reset"
+        )
+    ).update({"is_used": True})
+
+    # Store new OTP
+    db_otp = OTPCode(
+        email=email,
+        otp=otp,
+        expires_at=expires_at,
+        is_used=False,
+        attempt_count=0,
+        purpose="reset"
+    )
+
+    db.add(db_otp)
+    db.commit()
+
+    print("💾 OTP stored in DB")
+
+    # Send email
+    try:
+        await send_otp_email(email, otp, "password_reset")
+        print("✅ Reset OTP email sent")
+        return OTPResponse(message="Password reset OTP sent")
+    except Exception as e:
+        print("❌ Email error:", e)
+        return OTPResponse(message="Failed to send OTP")
+
+    # ----------------------------------------------------------------------------
+# VERIFY RESET OTP
+# ----------------------------------------------------------------------------
+@app.post("/auth/verify-reset-otp")
+async def verify_reset_otp(request: OTPVerify, db: Session = Depends(get_db)):
+    print("🔐 Verify reset OTP called")
+    print("📧 Email:", request.email)
+    print("🔢 OTP:", request.otp)
+
+    otp_record = db.query(OTPCode).filter(
+        and_(
+            OTPCode.email == request.email,
+            OTPCode.otp == request.otp,
+            OTPCode.is_used == False,
+            OTPCode.purpose == "reset"
+        )
+    ).first()
+
+    if not otp_record:
+        raise HTTPException(status_code=400, detail="Invalid OTP")
+
+    if is_otp_expired(otp_record.expires_at):
+        raise HTTPException(status_code=400, detail="OTP expired")
+
+    print("✅ Reset OTP verified")
+    return {"message": "OTP verified successfully"}
+
+
+# ----------------------------------------------------------------------------
+# RESET PASSWORD
+# ----------------------------------------------------------------------------
+@app.post("/auth/reset-password")
+async def reset_password(request: PasswordReset, db: Session = Depends(get_db)):
+    print("🔐 Reset password endpoint called")
+    print("📧 Email:", request.email)
+    print("🔢 OTP:", request.otp)
+
+    email = request.email
+    otp = request.otp
+    new_password = request.new_password
+
+    # Find OTP record
+    otp_record = db.query(OTPCode).filter(
+        and_(
+            OTPCode.email == email,
+            OTPCode.otp == otp,
+            OTPCode.is_used == False,
+            OTPCode.purpose == "reset"
+        )
+    ).first()
+
+    if not otp_record:
+        print("❌ Invalid OTP")
+        raise HTTPException(status_code=400, detail="Invalid OTP")
+
+    # Check expiry
+    if is_otp_expired(otp_record.expires_at):
+        otp_record.is_used = True
+        db.commit()
+        print("⏰ OTP expired")
+        raise HTTPException(status_code=400, detail="OTP expired")
+
+    # Find user
+    user = db.query(User).filter(User.email == email).first()
+    if not user:
+        print("❌ User not found")
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # Update password
+    user.hashed_password = get_password_hash(new_password)
+
+    # Mark OTP as used
+    otp_record.is_used = True
+
+    db.commit()
+
+    print("✅ Password reset successful")
+    return {"message": "Password reset successful"}
+
+    
 
 
 # ----------------------------------------------------------------------------

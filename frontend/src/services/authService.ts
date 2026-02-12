@@ -11,7 +11,9 @@ const api = axios.create({
   },
 });
 
-// Request interceptor to add auth token
+// ========================
+// REQUEST INTERCEPTOR
+// ========================
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('access_token');
@@ -20,26 +22,28 @@ api.interceptors.request.use(
     }
     return config;
   },
-  (error) => {
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
-// Response interceptor to handle errors
+// ========================
+// RESPONSE INTERCEPTOR
+// ========================
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // Token expired or invalid
+      // 🔥 UPDATED: clear auth & redirect
       localStorage.removeItem('access_token');
       localStorage.removeItem('user');
-      window.location.href = '/login';
+      window.location.href = '/signin'; // ⬅️ UPDATED (was /login)
     }
     return Promise.reject(error);
   }
 );
 
-// Types
+// ========================
+// TYPES
+// ========================
 export interface User {
   id: number;
   email: string;
@@ -67,9 +71,10 @@ export interface VerifyResponse {
   token?: string;
 }
 
-// API Functions
+// ========================
+// API FUNCTIONS
+// ========================
 export const authAPI = {
-  // Send OTP for registration
   sendOTP: async (signupData: {
     first_name: string;
     last_name: string;
@@ -77,90 +82,110 @@ export const authAPI = {
     password: string;
     confirm_password: string;
   }): Promise<OTPResponse> => {
-    const response: AxiosResponse<OTPResponse> = await api.post('/auth/send-otp', signupData);
+    const response: AxiosResponse<OTPResponse> =
+      await api.post('/auth/send-otp', signupData);
     return response.data;
   },
 
-  // Verify OTP
   verifyOTP: async (email: string, otp: string): Promise<VerifyResponse> => {
-    const response: AxiosResponse<VerifyResponse> = await api.post('/auth/verify-otp', { email, otp });
+    const response: AxiosResponse<VerifyResponse> =
+      await api.post('/auth/verify-otp', { email, otp });
     return response.data;
   },
 
-  // Complete registration
+   // 🔥 NEW FUNCTION FOR FORGOT PASSWORD OTP
+  verifyResetOTP: async (
+    email: string,
+    otp: string
+  ): Promise<{ success: boolean; message: string }> => {
+    const response = await api.post('/auth/verify-reset-otp', { email, otp });
+    return response.data;
+  },
+
   register: async (email: string, password: string): Promise<AuthResponse> => {
-    const response: AxiosResponse<AuthResponse> = await api.post('/auth/register', null, {
-      params: { email, password }
-    });
+    const response: AxiosResponse<AuthResponse> =
+      await api.post('/auth/register', null, { params: { email, password } });
     return response.data;
   },
 
-  // Login
   login: async (email: string, password: string): Promise<AuthResponse> => {
-    const response: AxiosResponse<AuthResponse> = await api.post('/auth/login', { email, password });
+    const response: AxiosResponse<AuthResponse> =
+      await api.post('/auth/login', { email, password });
     return response.data;
   },
 
-  // Send OTP for password reset
   sendPasswordResetOTP: async (email: string): Promise<OTPResponse> => {
-    const response: AxiosResponse<OTPResponse> = await api.post('/auth/forgot-password', { email });
+    const response: AxiosResponse<OTPResponse> =
+      await api.post('/auth/forgot-password', { email });
     return response.data;
   },
 
-  // Reset password with OTP
-  resetPassword: async (email: string, otp: string, newPassword: string): Promise<{ message: string }> => {
-    const response: AxiosResponse<{ message: string }> = await api.post('/auth/reset-password', {
-      email,
-      otp,
-      new_password: newPassword
-    });
+  resetPassword: async (
+    email: string,
+    otp: string,
+    newPassword: string
+  ): Promise<{ message: string }> => {
+    const response: AxiosResponse<{ message: string }> =
+      await api.post('/auth/reset-password', {
+        email,
+        otp,
+        new_password: newPassword,
+      });
     return response.data;
   },
 
-  // Get current user
   getCurrentUser: async (): Promise<User> => {
     const response: AxiosResponse<User> = await api.get('/auth/me');
     return response.data;
   },
 };
 
-// Auth utilities
+// ========================
+// AUTH UTILITIES
+// ========================
 export const authUtils = {
-  // Store auth data
+  // ✅ already used in login page
   setAuthData: (token: string, user: User) => {
     localStorage.setItem('access_token', token);
     localStorage.setItem('user', JSON.stringify(user));
   },
 
-  // Clear auth data
+  // 🔥 NEW (explicit logout helper)
+  logout: () => {
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('user');
+  },
+
   clearAuthData: () => {
     localStorage.removeItem('access_token');
     localStorage.removeItem('user');
   },
 
-  // Get stored user
   getStoredUser: (): User | null => {
     const userStr = localStorage.getItem('user');
     return userStr ? JSON.parse(userStr) : null;
   },
 
-  // Get stored token
   getStoredToken: (): string | null => {
     return localStorage.getItem('access_token');
   },
 
-  // Check if user is authenticated
+  // 🔥 NEW (semantic helper for UI)
+  isLoggedIn: (): boolean => {
+    return !!localStorage.getItem('access_token');
+  },
+
+  // kept for backward compatibility
   isAuthenticated: (): boolean => {
     return !!localStorage.getItem('access_token');
   },
 
-  // Format lockout time
   formatLockoutTime: (lockoutUntil: string): string => {
     const lockoutDate = new Date(lockoutUntil);
     const now = new Date();
     const diffMs = lockoutDate.getTime() - now.getTime();
     const diffMins = Math.ceil(diffMs / 60000);
-    
+
     if (diffMins <= 0) return 'Available now';
     if (diffMins === 1) return '1 minute';
     return `${diffMins} minutes`;
