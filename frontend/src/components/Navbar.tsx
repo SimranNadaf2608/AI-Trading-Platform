@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { TrendingUp, Info, Briefcase, Settings, FileText, UserPlus, LogOut } from 'lucide-react';
+import { TrendingUp, Info, Briefcase, Settings, FileText, UserPlus, LogOut, Package } from 'lucide-react';
 import Logo from './Logo';
 import { authUtils } from '../services/authService';
 
@@ -19,6 +19,7 @@ const Navbar = () => {
     { path: '/', label: 'Dashboard', icon: TrendingUp },
     { path: '/about', label: 'About Us', icon: Info },
     { path: '/features', label: 'Features', icon: Briefcase },
+    { path: '/products', label: 'Products', icon: Package },
     { path: '/blogs', label: 'Blogs', icon: FileText },
   ];
 

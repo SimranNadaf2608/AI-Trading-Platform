@@ -9,6 +9,7 @@ import Blogs from './pages/Blogs';
 import SignupReal from './pages/SignupReal';
 import SigninReal from './pages/SigninReal';
 import OtpVerification from './pages/OtpVerification';
+import Products from './pages/Products';
 import ForgotPassword from './pages/ForgotPassword';
 import './App.css';
 
@@ -23,6 +24,7 @@ function App() {
             <Route path="/about" element={<About />} />
             <Route path="/features" element={<Features />} />
             <Route path="/blogs" element={<Blogs />} />
+            <Route path="/products" element={<Products />} />
             <Route path="/signup" element={<SignupReal />} />
             <Route path="/login" element={<SigninReal />} />
             <Route path="/verify-otp" element={<OtpVerification />} />
