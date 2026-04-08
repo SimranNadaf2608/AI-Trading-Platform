@@ -1,0 +1,559 @@
+/* Cryptomaty Light Theme Dashboard */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+body {
+  margin: 0;
+  font-family: 'Inter', sans-serif;
+  background-color: #ffffff;
+}
+
+.cryptomaty-layout {
+  display: flex;
+  min-height: 100vh;
+  background-color: #ffffff;
+  color: #1F2937;
+  overflow: hidden;
+}
+
+/* LEFT SIDEBAR */
+.crypto-sidebar {
+  width: 240px;
+  border-right: 1px solid #F3F4F6;
+  display: flex;
+  flex-direction: column;
+  padding: 1.5rem 0;
+  background: white;
+  z-index: 10;
+}
+
+.crypto-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0 1.5rem 2rem;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+.brand-icon-wrapper {
+  width: 28px;
+  height: 28px;
+  border: 2px solid #3B82F6;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.brand-icon-inner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid #3B82F6;
+  border-left-color: transparent;
+  border-radius: 50%;
+}
+
+.sidebar-label {
+  padding: 0 1.5rem;
+  font-size: 0.75rem;
+  color: #9CA3AF;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.5rem;
+}
+
+.crypto-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0 1rem;
+}
+
+.nav-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border: none;
+  background: transparent;
+  width: 100%;
+  text-align: left;
+  border-radius: 0.5rem;
+  color: #6B7280;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.nav-btn:hover {
+  background-color: #F3F4F6;
+  color: #374151;
+}
+
+.nav-btn.active {
+  background-color: #3B82F6;
+  color: white;
+}
+
+.sidebar-bottom {
+  margin-top: auto;
+  border-top: 1px solid #F3F4F6;
+  padding: 1.5rem 1.5rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.user-profile-small {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.user-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.user-info-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.user-name {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+.user-id {
+  font-size: 0.75rem;
+  color: #9CA3AF;
+}
+
+.sidebar-actions {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 0.5rem;
+}
+
+.icon-btn {
+  background: transparent;
+  border: none;
+  color: #6B7280;
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 0.25rem;
+}
+
+.icon-btn:hover {
+  background-color: #F3F4F6;
+}
+
+.text-blue { color: #3B82F6; }
+.text-red { color: #EF4444; }
+
+/* CENTER CONTENT */
+.crypto-main {
+  flex: 1;
+  padding: 2rem;
+  overflow-y: auto;
+  background-color: #ffffff;
+}
+
+.main-header {
+  margin-bottom: 2rem;
+}
+
+.header-user {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.header-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 2px solid white;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.welcome-text {
+  margin: 0 0 0.25rem;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+.date-text {
+  margin: 0;
+  font-size: 0.875rem;
+  color: #6B7280;
+}
+
+/* Banner */
+.broker-banner {
+  background: linear-gradient(135deg, #2563EB 0%, #3B82F6 100%);
+  border-radius: 1rem;
+  padding: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  color: white;
+  margin-bottom: 2.5rem;
+  box-shadow: 0 10px 25px rgba(59, 130, 246, 0.25);
+}
+
+.banner-icon-placeholder {
+  width: 80px;
+  height: 80px;
+  background-color: white;
+  border-radius: 1rem;
+  flex-shrink: 0;
+}
+
+.banner-content h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.banner-content p {
+  margin: 0 0 1rem;
+  font-size: 0.9rem;
+  opacity: 0.9;
+}
+
+.add-broker-btn {
+  background: white;
+  color: #2563EB;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  font-size: 0.875rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.add-broker-btn:hover {
+  background: #F3F4F6;
+}
+
+/* Sections */
+.section-container {
+  margin-bottom: 2.5rem;
+}
+
+.section-title {
+  margin: 0 0 1rem;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+.section-header-flex {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.view-all-btn {
+  background: transparent;
+  border: none;
+  color: #3B82F6;
+  font-weight: 600;
+  font-size: 0.875rem;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  cursor: pointer;
+}
+
+/* Market Cards */
+.market-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+}
+
+.market-card {
+  border: 1px solid #E5E7EB;
+  border-radius: 0.75rem;
+  padding: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: white;
+}
+
+.coin-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.coin-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 1.125rem;
+}
+.coin-icon.btc { background: #FFF7ED; color: #F59E0B; }
+.coin-icon.eth { background: #F3F4F6; color: #374151; }
+.coin-icon.sol { background: #F4F5F7; color: #14F195; }
+
+.coin-symbol {
+  display: block;
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: #111827;
+}
+
+.coin-name {
+  display: block;
+  font-size: 0.75rem;
+  color: #6B7280;
+}
+
+.coin-price-info {
+  text-align: right;
+}
+
+.price {
+  display: block;
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: #111827;
+}
+
+.change {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+.change.positive { color: #10B981; }
+
+/* Strategy Cards */
+.strategy-cards {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.5rem;
+}
+
+.strategy-card {
+  border: 1px solid #E5E7EB;
+  border-radius: 0.75rem;
+  background: white;
+  padding: 1.5rem 1.5rem 0 1.5rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.strategy-info h4 {
+  margin: 0 0 0.25rem;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.strategy-info p {
+  margin: 0;
+  font-size: 0.875rem;
+  color: #6B7280;
+}
+
+.text-green {
+  color: #10B981;
+  font-weight: 600;
+}
+
+.strategy-chart {
+  margin-top: 1rem;
+  width: 100%;
+}
+
+/* RIGHT SIDEBAR */
+.crypto-right-sidebar {
+  width: 380px;
+  border-left: 1px solid #E5E7EB;
+  background: #ffffff;
+  display: flex;
+  flex-direction: column;
+}
+
+.right-tabs {
+  display: flex;
+  border-bottom: 1px solid #E5E7EB;
+}
+
+.tab-btn {
+  flex: 1;
+  background: transparent;
+  border: none;
+  padding: 1rem;
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: #6B7280;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+}
+
+.tab-btn.active {
+  color: #3B82F6;
+  border-bottom-color: #3B82F6;
+}
+
+.screener-content {
+  padding: 1.5rem;
+  overflow-y: auto;
+}
+
+.screener-title {
+  text-align: center;
+  color: #3B82F6;
+  margin: 0 0 1.5rem;
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.gauge-container {
+  position: relative;
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.gauge-svg {
+  width: 100%;
+  max-width: 250px;
+  margin: 0 auto;
+}
+
+.gauge-text {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+}
+
+.gauge-value {
+  margin: 0 0 0.25rem;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #374151;
+}
+
+.gauge-label {
+  margin: 0;
+  font-size: 0.875rem;
+  color: #9CA3AF;
+}
+
+.screener-filters {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.filter-btn {
+  background: white;
+  border: 1px solid #E5E7EB;
+  padding: 0.5rem 0.75rem;
+  border-radius: 1rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #4B5563;
+  cursor: pointer;
+}
+
+.filter-btn.active {
+  border-color: #3B82F6;
+  color: #3B82F6;
+}
+
+.screener-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.screener-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.75rem;
+  border: 1px solid #E5E7EB;
+  border-radius: 0.75rem;
+  background: #ffffff;
+}
+
+.screener-coin {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.s-icon {
+  width: 32px;
+  height: 32px;
+  background: #F3F4F6;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #374151;
+  font-weight: 600;
+}
+
+.s-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.s-symbol {
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: #111827;
+}
+
+.s-name {
+  font-size: 0.7rem;
+  color: #9CA3AF;
+}
+
+.screener-price {
+  text-align: right;
+  display: flex;
+  flex-direction: column;
+}
+
+.s-val {
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: #111827;
+}
+
+.s-change {
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+.s-change.positive { color: #10B981; }
+.s-change.negative { color: #EF4444; }
+
+.s-updated {
+  font-size: 0.65rem;
+  color: #9CA3AF;
+  margin-top: 0.25rem;
+}

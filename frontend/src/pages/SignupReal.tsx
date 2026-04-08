@@ -284,7 +284,7 @@ const SignupReal: React.FC = () => {
             </div>
 
             <div className="action-buttons">
-              <button className="dashboard-btn" onClick={() => navigate('/')}>
+              <button className="dashboard-btn" onClick={() => navigate('/dashboard')}>
                 Go to Dashboard
                 <ArrowLeft size={20} className="rotate-180" />
               </button>

@@ -52,3 +52,41 @@ class VerifyResponse(BaseModel):
     success: bool
     user: Optional[UserResponse] = None
     token: Optional[str] = None
+
+class BrokerConnectRequest(BaseModel):
+    broker_name: str
+    api_key: str
+    api_secret: Optional[str] = None
+
+class BrokerResponse(BaseModel):
+    id: int
+    broker_name: str
+    balance: float
+    is_connected: bool
+    
+    class Config:
+        from_attributes = True
+
+class StrategyResponse(BaseModel):
+    id: int
+    name: str
+    risk_level: str
+    expected_return: str
+    is_active: bool
+    margin_allocated: float
+
+    class Config:
+        from_attributes = True
+
+class TransactionResponse(BaseModel):
+    id: int
+    tx_id: str
+    date: str
+    type: str
+    asset_pair: str
+    amount: str
+    status: str
+    profit: str
+
+    class Config:
+        from_attributes = True

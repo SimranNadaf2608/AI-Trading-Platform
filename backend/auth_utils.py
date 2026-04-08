@@ -66,6 +66,8 @@ def generate_otp() -> str:
 
 def is_otp_expired(expires_at) -> bool:
     """Check if OTP has expired"""
+    if expires_at.tzinfo is None:
+        expires_at = expires_at.replace(tzinfo=timezone.utc)
     return datetime.now(timezone.utc) > expires_at
 
 def is_resend_allowed(last_created_at: Optional[datetime]) -> bool:

@@ -1,0 +1,16 @@
+Traceback (most recent call last):
+  File "C:\Users\shrid\AppData\Local\Programs\Python\Python311\Lib\site-packages\starlette\middleware\errors.py", line 162, in __call__
+    await self.app(scope, receive, _send)
+  File "C:\Users\shrid\AppData\Local\Programs\Python\Python311\Lib\site-packages\starlette\middleware\cors.py", line 91, in __call__
+    await self.simple_response(scope, receive, send, request_headers=headers)
+  File "C:\Users\shrid\AppData\Local\Programs\Python\Python311\Lib\site-packages\starlette\middleware\cors.py", line 146, in simple_response
+    await self.app(scope, receive, send)
+  File "C:\Users\shrid\AppData\Local\Programs\Python\Python311\Lib\site-packages\starlette\middleware\exceptions.py", line 79, in __call__
+    raise exc
+  File "C:\Users\shrid\AppData\Local\Programs\Python\Python311\Lib\site-packages\starlette\middleware\exceptions.py", line 68, in __call__
+    await self.app(scope, receive, sender)
+  File "C:\Users\shrid\AppData\Local\Programs\Python\Python311\Lib\contextlib.py", line 222, in __aexit__
+    await self.gen.athrow(typ, value, traceback)
+  File "C:\Users\shrid\AppData\Local\Programs\Python\Python311\Lib\site-packages\fastapi\concurrency.py", line 36, in contextmanager_in_threadpool
+    raise e
+TypeError: can't compare offset-naive and offset-aware datetimes

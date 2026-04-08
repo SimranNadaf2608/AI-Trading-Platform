@@ -1,0 +1,1 @@
+STATUS 200: {"message":"OTP sent successfully to your email","can_resend_after":null,"is_locked":false,"lockout_until":null}

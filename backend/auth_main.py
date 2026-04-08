@@ -1,4 +1,5 @@
-from fastapi import FastAPI, HTTPException, Depends, status
+from fastapi import FastAPI, HTTPException, Depends, status, Request
+from fastapi.responses import JSONResponse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
@@ -16,12 +17,28 @@ from auth_utils import (
 )
 from email_service import send_otp_email
 from api_routes import router as api_router
+from dashboard_routes import router as dashboard_router
 
 app = FastAPI(title="AITrade Authentication API", version="1.0.0")
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    import traceback
+    with open("crash.log", "w", encoding="utf-8") as f:
+        f.write(traceback.format_exc())
+    return JSONResponse(status_code=500, content={"message": f"Global Crash: {str(exc)}"})
+
 security = HTTPBearer()
 
 # Include API routes
 app.include_router(api_router, prefix="/api", tags=["api"])
+app.include_router(dashboard_router, prefix="/api/dashboard", tags=["dashboard"])
+
+@app.on_event("startup")
+async def startup_event():
+    from database import Base, engine
+    Base.metadata.create_all(bind=engine)
+    print("✅ Database tables verified on startup!")
 
 # CORS middleware
 app.add_middleware(
@@ -67,8 +84,21 @@ async def send_otp(request: SignupRequest, db: Session = Depends(get_db)):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Passwords do not match"
         )
+        
+    print(f"🔥 RUNTIME DB ENGINE URL: {db.get_bind().url}")
+    from sqlalchemy import inspect
+    print(f"🔥 RUNTIME DB TABLES: {inspect(db.get_bind()).get_table_names()}")
 
-    existing_user = db.query(User).filter(User.email == email).first()
+    try:
+        from database import Base, engine
+        Base.metadata.create_all(bind=engine)
+        existing_user = db.query(User).filter(User.email == email).first()
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"DB FATAL: {str(e)} | URL: {db.get_bind().url} | TABLES: {inspect(db.get_bind()).get_table_names()}"
+        )
+
     if existing_user and existing_user.is_verified:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -140,7 +170,7 @@ async def send_otp(request: SignupRequest, db: Session = Depends(get_db)):
         db.commit()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to send OTP. Please try again."
+            detail=f"Failed to send OTP: {str(e)}"
         )
 
 

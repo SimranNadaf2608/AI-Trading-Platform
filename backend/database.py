@@ -7,8 +7,10 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Database configuration (Supabase Postgres)
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:password@localhost:5432/aitrade_auth")
+# Database configuration (Local SQLite)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DB_PATH = os.path.join(BASE_DIR, "aitrade_v2.db")
+DATABASE_URL = f"sqlite:///{DB_PATH}"
 
 Base = declarative_base()
 
@@ -39,8 +41,46 @@ class OTPCode(Base):
     password_hash = Column(Text, nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.utcnow().replace(tzinfo=None))
 
+class BrokerAccount(Base):
+    __tablename__ = "broker_accounts"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, index=True)
+    broker_name = Column(String, index=True)
+    api_key = Column(String)
+    api_secret = Column(String, nullable=True)
+    balance = Column(Integer, default=10000)
+    is_connected = Column(Boolean, default=True)
+
+class Strategy(Base):
+    __tablename__ = "strategies"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, nullable=True)
+    name = Column(String, index=True)
+    risk_level = Column(String)
+    expected_return = Column(String)
+    is_active = Column(Boolean, default=False)
+    margin_allocated = Column(Integer, default=0)
+
+class Transaction(Base):
+    __tablename__ = "transactions"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, index=True)
+    tx_id = Column(String, unique=True, index=True)
+    date = Column(String)
+    type = Column(String)
+    asset_pair = Column(String)
+    amount = Column(String)
+    status = Column(String)
+    profit = Column(String)
+
 # Create engine and session
-engine = create_engine(DATABASE_URL)
+if DATABASE_URL.startswith("sqlite"):
+    engine = create_engine(
+        DATABASE_URL, connect_args={"check_same_thread": False}
+    )
+else:
+    engine = create_engine(DATABASE_URL)
+
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 # Create tables
